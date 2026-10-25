@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { color-scheme: dark; }
+  body { @apply bg-base text-ink font-sans antialiased; overflow-x: hidden; }
+  :focus-visible { outline: 2px solid #F5A623; outline-offset: 2px; }
+  img, video { max-width: 100%; }
+}
+@layer components {
+  .btn { @apply inline-flex min-h-[40px] items-center justify-center gap-2 rounded-md border border-line bg-card px-4 text-sm font-medium transition-colors hover:bg-[#2a2a2a] disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply border-accent bg-accent text-black hover:bg-[#e09615]; }
+  .input { @apply min-h-[40px] w-full rounded-md border border-line bg-surface px-3 text-sm placeholder:text-muted; }
+  .chip { @apply inline-flex items-center rounded-md border border-line bg-card px-3 py-1.5 text-sm transition-colors hover:border-accent; }
+  .skeleton { @apply rounded-md bg-card; background-image: linear-gradient(90deg, transparent, rgba(255,255,255,.05), transparent); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
+}
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
