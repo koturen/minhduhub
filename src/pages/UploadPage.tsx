@@ -7,6 +7,7 @@ import UploadDropzone from '../components/media/UploadDropzone';
 import { isCloudinaryConfigured, toMediaRecord, uploadToCloudinary, type UploadHandle } from '../lib/cloudinary';
 import { formatBytes } from '../lib/format';
 import { parseTags, uploadFormSchema, validateFile, type UploadFormValues } from '../lib/validation';
+import { isSupabaseConfigured } from '../lib/supabase';
 import { mediaRepository } from '../services/mediaRepository';
 import { CATEGORIES } from '../types/media';
 
@@ -98,7 +99,7 @@ export default function UploadPage() {
           <p>Uploads are off because Cloudinary isn't configured. Set <code>VITE_CLOUDINARY_CLOUD_NAME</code> and <code>VITE_CLOUDINARY_UPLOAD_PRESET</code> (see README), then restart.</p>
         </div>
       ) : (
-        <p className="mb-4 text-sm text-muted">Files upload to Cloudinary. Their details are saved in this browser only, so other devices won't see them until a backend is connected.</p>
+        <p className="mb-4 text-sm text-muted">{isSupabaseConfigured ? 'Files upload to Cloudinary and their details are saved to the shared database, so everyone can see them.' : "Files upload to Cloudinary. Their details are saved in this browser only, so other devices won't see them until a backend is connected."}</p>
       )}
 
       <UploadDropzone onFiles={addFiles} disabled={busy || !isCloudinaryConfigured} />
