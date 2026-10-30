@@ -34,13 +34,13 @@ export function uploadToCloudinary(file: File, onProgress: (percent: number) => 
       try {
         const body = JSON.parse(xhr.responseText) as CloudinaryResponse & { error?: { message: string } };
         if (xhr.status >= 200 && xhr.status < 300) resolve(body);
-        else reject(new Error(body.error?.message ?? `Upload failed (${xhr.status}).`));
+        else reject(new Error(body.error?.message ?? 'err.upload'));
       } catch {
-        reject(new Error('Cloudinary returned an unreadable response.'));
+        reject(new Error('err.unreadable'));
       }
     };
-    xhr.onerror = () => reject(new Error('Network error. Check your connection and try again.'));
-    xhr.onabort = () => reject(new Error('Upload cancelled.'));
+    xhr.onerror = () => reject(new Error('err.network'));
+    xhr.onabort = () => reject(new Error('err.cancelled'));
     const form = new FormData();
     form.append('file', file);
     form.append('upload_preset', uploadPreset);
@@ -51,7 +51,7 @@ export function uploadToCloudinary(file: File, onProgress: (percent: number) => 
 
 export function toMediaRecord(
   res: CloudinaryResponse,
-  meta: { title: string; description?: string; category: string; tags: string[]; allowDownload: boolean },
+  meta: { title: string; description?: string; tags: string[]; allowDownload: boolean },
 ): Media {
   if (!cloudName) throw new Error('Cloudinary is not configured.');
   const isVideo = res.resource_type === 'video';
@@ -63,7 +63,6 @@ export function toMediaRecord(
     resourceType: isVideo ? 'video' : 'image',
     url: isVideo ? videoUrl(cloudName, res.public_id) : imageUrl(cloudName, res.public_id),
     thumbnailUrl: isVideo ? videoPoster(cloudName, res.public_id) : imageThumb(cloudName, res.public_id),
-    category: meta.category,
     tags: meta.tags,
     createdAt: res.created_at ?? new Date().toISOString(),
     visibility: 'public',

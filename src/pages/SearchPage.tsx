@@ -1,2 +1,3 @@
 import MediaBrowser from '../components/media/MediaBrowser';
-export default function SearchPage() { return <MediaBrowser title="Search" />; }
+import { useI18n } from '../i18n';
+export default function SearchPage() { const { t } = useI18n(); return <MediaBrowser title={t('browse.search')} />; }

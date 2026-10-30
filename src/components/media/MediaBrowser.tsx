@@ -2,22 +2,24 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, X } from 'lucide-react';
 import { useMediaList } from '../../hooks/useMedia';
-import { CATEGORIES, type MediaType } from '../../types/media';
+import type { MediaType } from '../../types/media';
+import { useI18n } from '../../i18n';
 import MediaGrid, { GridSkeleton } from './MediaGrid';
 
 const PAGE = 12;
 
 /** Search/filter/sort listing. Filters live in URL query params. */
 export default function MediaBrowser({ type, title }: { type?: MediaType; title: string }) {
+  const { t } = useI18n();
   const [params, setParams] = useSearchParams();
   const { data, loading, error, reload } = useMediaList();
   const [text, setText] = useState(params.get('q') ?? '');
   const [visible, setVisible] = useState(PAGE);
 
   const q = params.get('q') ?? '';
-  const category = params.get('category') ?? '';
   const sort = params.get('sort') === 'oldest' ? 'oldest' : 'latest';
-  const kind = type ?? (params.get('type') as MediaType | null) ?? '';
+  const rawKind = params.get('type');
+  const kind: MediaType | '' = type ?? (rawKind === 'video' || rawKind === 'image' ? rawKind : '');
 
   const setParam = (key: string, value: string) => {
     const next = new URLSearchParams(params);
@@ -26,9 +28,7 @@ export default function MediaBrowser({ type, title }: { type?: MediaType; title:
     setVisible(PAGE);
   };
 
-  // Keep the box in sync when the header search changes the URL.
   useEffect(() => setText(q), [q]);
-  // Debounce typing into the URL.
   useEffect(() => {
     if (text === q) return;
     const id = setTimeout(() => setParam('q', text.trim()), 300);
@@ -39,12 +39,12 @@ export default function MediaBrowser({ type, title }: { type?: MediaType; title:
   const results = useMemo(() => {
     const term = q.toLowerCase();
     return data
-      .filter((m) => (!kind || m.type === kind) && (!category || m.category === category))
-      .filter((m) => !term || m.title.toLowerCase().includes(term) || m.tags.some((t) => t.includes(term)))
+      .filter((m) => !kind || m.type === kind)
+      .filter((m) => !term || m.title.toLowerCase().includes(term) || m.tags.some((tag) => tag.includes(term)))
       .sort((a, b) => (sort === 'oldest' ? a.createdAt.localeCompare(b.createdAt) : b.createdAt.localeCompare(a.createdAt)));
-  }, [data, q, category, sort, kind]);
+  }, [data, q, sort, kind]);
 
-  const hasFilters = Boolean(q || category || (!type && kind) || sort === 'oldest');
+  const hasFilters = Boolean(q || (!type && kind) || sort === 'oldest');
 
   return (
     <div>
@@ -52,46 +52,41 @@ export default function MediaBrowser({ type, title }: { type?: MediaType; title:
       <div className="mb-6 flex flex-wrap gap-2">
         <div className="relative min-w-[200px] flex-1">
           <Search size={16} className="absolute left-3 top-3 text-muted" aria-hidden="true" />
-          <label htmlFor="filter-q" className="sr-only">Search by title or tag</label>
-          <input id="filter-q" className="input pl-9" placeholder="Search by title or tag" value={text} onChange={(e) => setText(e.target.value)} />
+          <label htmlFor="filter-q" className="sr-only">{t('browse.searchLabel')}</label>
+          <input id="filter-q" className="input pl-9" placeholder={t('browse.searchLabel')} value={text} onChange={(e) => setText(e.target.value)} />
         </div>
-        <label className="sr-only" htmlFor="filter-cat">Category</label>
-        <select id="filter-cat" className="input w-auto" value={category} onChange={(e) => setParam('category', e.target.value)}>
-          <option value="">All categories</option>
-          {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-        </select>
         {!type && (
           <>
-            <label className="sr-only" htmlFor="filter-type">Media type</label>
+            <label className="sr-only" htmlFor="filter-type">{t('browse.typeLabel')}</label>
             <select id="filter-type" className="input w-auto" value={kind} onChange={(e) => setParam('type', e.target.value)}>
-              <option value="">Videos and images</option>
-              <option value="video">Videos</option>
-              <option value="image">Images</option>
+              <option value="">{t('browse.typeAll')}</option>
+              <option value="video">{t('browse.typeVideo')}</option>
+              <option value="image">{t('browse.typeImage')}</option>
             </select>
           </>
         )}
-        <label className="sr-only" htmlFor="filter-sort">Sort</label>
+        <label className="sr-only" htmlFor="filter-sort">{t('browse.sortLabel')}</label>
         <select id="filter-sort" className="input w-auto" value={sort} onChange={(e) => setParam('sort', e.target.value)}>
-          <option value="latest">Newest</option>
-          <option value="oldest">Oldest</option>
+          <option value="latest">{t('browse.latest')}</option>
+          <option value="oldest">{t('browse.oldest')}</option>
         </select>
-        {hasFilters && <button className="btn" onClick={() => { setText(''); setParams({}, { replace: true }); setVisible(PAGE); }}><X size={16} />Clear filters</button>}
+        {hasFilters && <button className="btn" onClick={() => { setText(''); setParams({}, { replace: true }); setVisible(PAGE); }}><X size={16} />{t('browse.clear')}</button>}
       </div>
 
       {loading && <GridSkeleton />}
       {error && (
         <div role="alert" className="rounded-md border border-danger p-4 text-sm">
-          {error} <button className="underline" onClick={reload}>Try again</button>
+          {t('browse.loadError')} <button className="underline" onClick={reload}>{t('common.retry')}</button>
         </div>
       )}
       {!loading && !error && results.length === 0 && (
-        <p className="rounded-md border border-line p-8 text-center text-muted">Nothing matches these filters. Clear them or try another search.</p>
+        <p className="rounded-md border border-line p-8 text-center text-muted">{t('browse.empty')}</p>
       )}
       {!loading && !error && results.length > 0 && (
         <>
           <MediaGrid items={results.slice(0, visible)} />
           {visible < results.length && (
-            <div className="mt-8 text-center"><button className="btn" onClick={() => setVisible((v) => v + PAGE)}>Load more</button></div>
+            <div className="mt-8 text-center"><button className="btn" onClick={() => setVisible((v) => v + PAGE)}>{t('common.loadMore')}</button></div>
           )}
         </>
       )}

@@ -1,5 +1,5 @@
--- Chạy toàn bộ tệp này trong Supabase: SQL Editor -> New query -> Run.
--- Nếu cloud name Cloudinary của bạn khác "hysrf8xi", hãy sửa dòng URL bên dưới.
+-- DỰ ÁN MỚI HOÀN TOÀN: chạy tệp này trong SQL Editor. (Dự án đã có bảng thì chạy migration-auth.sql.)
+-- Nếu cloud name Cloudinary khác "hysrf8xi", hãy sửa các dòng URL bên dưới.
 
 create table if not exists public.media (
   id uuid primary key default gen_random_uuid(),
@@ -9,7 +9,7 @@ create table if not exists public.media (
   resource_type text not null check (resource_type in ('video', 'image')),
   url text not null,
   thumbnail_url text,
-  category text not null,
+  category text not null default '',
   tags text[] not null default '{}',
   created_at timestamptz not null default now(),
   visibility text not null default 'public' check (visibility in ('public', 'unlisted', 'private')),
@@ -18,7 +18,8 @@ create table if not exists public.media (
   duration numeric,
   cloudinary_public_id text,
   format text,
-  allow_download boolean not null default false
+  allow_download boolean not null default false,
+  owner_id uuid references auth.users(id) on delete set null
 );
 
 create table if not exists public.reports (
@@ -31,24 +32,24 @@ create table if not exists public.reports (
 alter table public.media enable row level security;
 alter table public.reports enable row level security;
 
--- Ai cũng xem được các mục công khai.
 drop policy if exists "public read" on public.media;
 create policy "public read" on public.media
   for select to anon, authenticated using (visibility = 'public');
 
--- Ai cũng thêm được, nhưng chỉ khi file nằm trên Cloudinary của bạn.
-drop policy if exists "restricted insert" on public.media;
-create policy "restricted insert" on public.media
-  for insert to anon, authenticated
+drop policy if exists "logged in insert" on public.media;
+create policy "logged in insert" on public.media
+  for insert to authenticated
   with check (
-    visibility = 'public'
+    owner_id = auth.uid()
+    and visibility = 'public'
     and url like 'https://res.cloudinary.com/hysrf8xi/%'
     and (thumbnail_url is null or thumbnail_url like 'https://res.cloudinary.com/hysrf8xi/%')
   );
 
--- Ai cũng gửi báo cáo được, nhưng không đọc được danh sách báo cáo.
+drop policy if exists "owner delete" on public.media;
+create policy "owner delete" on public.media
+  for delete to authenticated using (owner_id = auth.uid());
+
 drop policy if exists "anyone can report" on public.reports;
 create policy "anyone can report" on public.reports
   for insert to anon, authenticated with check (true);
-
--- Không có policy update/delete: chỉ bạn (chủ dự án) sửa/xóa được trong Table Editor.
